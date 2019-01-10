@@ -15,6 +15,7 @@ if ( !defined('ABSPATH') )
 die();
 
 
+
 function country_redirector_settings_init() {
  // register a new setting
  register_setting( 'country_redirector', 'country_redirector_options' );
@@ -222,7 +223,7 @@ function country_redirector_options_page_html() {
 
    add_action( 'admin_menu', 'country_redirector_options_page' );
 
-   function get_visitor_IP() {
+   function country_redirector_get_visitor_IP() {
    	$ip = null;
    	$client = @$_SERVER['HTTP_CLIENT_IP'];
    	$forward = @$_SERVER['HTTP_X_FORWARDED_FOR'];
@@ -239,23 +240,24 @@ function country_redirector_options_page_html() {
 
 
 
-    $ip = get_visitor_IP();
-$ip = "89.46.89.241";
+    $ip = country_redirector_get_visitor_IP();
+
     if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
       $options = get_option( 'country_redirector_options' );
-
+      //add_action( 'wp_footer',   'country_redirector_footer_info' ,10000 );
       switch ($options["country_redirector_field_type"]) {
         case 'FILE':
           include __DIR__.'/GeoIp2/geoip2.phar';
           $reader = new GeoIp2\Database\Reader( __DIR__ . '/GeoIp2/GeoLite2-Country.mmdb' );
           $country = $reader->country( $ip);
+
            if(is_object($country) && strlen($country->country->isoCode) == 2){
-               if(!detectUrlCountry($country->country->isoCode)){
+
+               if(!country_redirector_detectUrlCountry($country->country->isoCode)){
                    add_action( 'wp_footer',   'country_redirector_add_country_redirector' , 1000 );
                    add_action( 'get_footer', 'country_redirector_add_footer_styles' );
                }
            }
-
 
           break;
         case 'API':
@@ -263,7 +265,15 @@ $ip = "89.46.89.241";
         break;
       }
     }
-  function detectUrlCountry($country){
+
+
+    function country_redirector_footer_info(){
+
+      ?>
+
+    <?php }
+
+  function country_redirector_detectUrlCountry($country){
     $options = get_option( 'country_redirector_options' );
     $redirections = array();
     if(isset($options[ "country_redirector_field_url"])){
@@ -275,7 +285,7 @@ $ip = "89.46.89.241";
         if(is_array($matches) &&  count($matches) > 0){
 
           foreach ($matches as $match) {
-            if(is_array($match) &&  count($match) > 0){            
+            if(is_array($match) &&  count($match) > 0){
               if(strpos($match[0], $country )!== FALSE ){
                 return true;
               }
