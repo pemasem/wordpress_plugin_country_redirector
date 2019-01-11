@@ -34,9 +34,37 @@ function country_redirector_settings_init() {
  add_settings_field('country_redirector_field_redirections', __( 'ACTIVE', 'country_redirector' ), 'country_redirector_field_redirections_cb', 'country_redirector', 'country_redirector_section_redirections', [ 'label_for' => 'country_redirector_field_redirections', 'class' => 'country_redirector_row', 'country_redirector_custom_data' => 'custom', ] );
 
 
+ add_settings_section('country_redirector_section_manage', __( 'Manage', 'country_redirector' ), 'country_redirector_section_manages_cb', 'country_redirector' );
+
 
 
 }
+
+function country_redirector_section_manages_cb(){?>
+  <input type="submit" name="save_to_file" value="SAVE TO FILE"><br>
+  <input type="submit" name="load_from_file" value="LOAD FROM FILE">
+  <input type="file" name="config" value="LOAD FROM FILE">
+<?php }
+
+if(isset($_POST["load_from_file"])){
+
+       $file_data = file_get_contents($_FILES["config"]["tmp_name"]);
+      $data = json_decode( $file_data, true);
+      if(is_array($data)){
+        update_option( 'country_redirector_options',$data );
+      }
+}
+if(isset($_POST["save_to_file"])){
+  file_put_contents(plugin_dir_path( __FILE__) . 'js/country_redirector.json', json_encode( $_POST["country_redirector_options"] ));
+  $file = plugin_dir_path( __FILE__) . 'js/country_redirector.json';
+  header('Content-type: text/plain');
+  header('Content-Length: '.filesize($file));
+  header('Content-Disposition: attachment; filename=country_redirector.json');
+  readfile($file);
+    exit;
+}
+
+
 function country_redirector_section_redirections_cb(){
   ?>
   <p><?php esc_html_e( 'Add Country Redirections', 'country_redirector' ); ?></p>
@@ -57,6 +85,7 @@ function country_redirector_field_location_cb($args){
   <select name="country_redirector_options[<?php echo esc_attr( $args['label_for'] ); ?>]">
     <option <?php echo isset( $options[ $args['label_for'] ] ) ? ( selected( $options[ $args['label_for'] ], 'top_floating', false ) ) : ( '' ); ?> value="top_floating">TOP FLOATING</option>
     <option <?php echo isset( $options[ $args['label_for'] ] ) ? ( selected( $options[ $args['label_for'] ], 'top_append', false ) ) : ( '' ); ?> value="top_append">TOP APPEND</option>
+      <option <?php echo isset( $options[ $args['label_for'] ] ) ? ( selected( $options[ $args['label_for'] ], 'top_fixed', false ) ) : ( '' ); ?> value="top_fixed">TOP FIXED</option>
   </select>
   <?php
 }
@@ -203,7 +232,7 @@ function country_redirector_options_page_html() {
  ?>
  <div class="wrap">
  <h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
- <form action="options.php" method="post">
+ <form action="options.php" method="post" enctype="multipart/form-data">
  <?php
  // output security fields for the registered setting "wporg"
  settings_fields( 'country_redirector' );
@@ -241,7 +270,7 @@ function country_redirector_options_page_html() {
 
 
     $ip = country_redirector_get_visitor_IP();
-
+ 
     if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
       $options = get_option( 'country_redirector_options' );
       //add_action( 'wp_footer',   'country_redirector_footer_info' ,10000 );
@@ -250,11 +279,9 @@ function country_redirector_options_page_html() {
           include __DIR__.'/GeoIp2/geoip2.phar';
           $reader = new GeoIp2\Database\Reader( __DIR__ . '/GeoIp2/GeoLite2-Country.mmdb' );
           $country = $reader->country( $ip);
-
            if(is_object($country) && strlen($country->country->isoCode) == 2){
-
                if(!country_redirector_detectUrlCountry($country->country->isoCode)){
-                   add_action( 'wp_footer',   'country_redirector_add_country_redirector' , 1000 );
+                   add_action( 'wp_footer',   'country_redirector_add_country_redirector' , 0 );
                    add_action( 'get_footer', 'country_redirector_add_footer_styles' );
                }
            }
@@ -283,7 +310,6 @@ function country_redirector_options_page_html() {
       foreach ($redirections as   $code) {
         preg_match_all('/'. str_replace("/", "\/",$code).'/', $url, $matches);
         if(is_array($matches) &&  count($matches) > 0){
-
           foreach ($matches as $match) {
             if(is_array($match) &&  count($match) > 0){
               if(strpos($match[0], $country )!== FALSE ){
@@ -303,13 +329,17 @@ function country_redirector_options_page_html() {
     <div id='country_redirector' class="hide <?=$options[ "country_redirector_field_location"]?>">
       <script type="text/javascript">
         window.onload = function(){
-          var country_redirector_hide = localStorage.getItem("country_redirector_hide");
+          var country_redirector_hide = sessionStorage.getItem("country_redirector_hide");
           if(!country_redirector_hide){
 
             <?php
               if($options[ "country_redirector_field_location"] == "top_append"){?>
-                  var panel = document.getElementById('country_redirector')
-                  document.body.insertBefore(panel, document.body.firstChild);
+                  country_redirector_top_append();
+              <?php }elseif($options[ "country_redirector_field_location"] =="top_fixed"){?>
+
+                 country_redirector_top_fixed();
+
+
               <?php } ?>
               document.getElementById('country_redirector').classList.remove("hide");
           }
@@ -332,7 +362,7 @@ function country_redirector_options_page_html() {
       </select>
     </div>
     <button onclick="var r = document.getElementById('country_redirector_select').value; window.location.href = r;"><?=$options["country_redirector_field_button"]?></button>
-    <a href="#" onclick="document.getElementById('country_redirector').remove();localStorage.setItem('country_redirector_hide', true);">X</a>
+    <a href="#" onclick="document.getElementById('country_redirector').remove();sessionStorage.setItem('country_redirector_hide', true);">X</a>
     </div>
     <?php
   }
@@ -340,6 +370,10 @@ function country_redirector_options_page_html() {
 
 
   function country_redirector_add_footer_styles() {
+    $options = get_option( 'country_redirector_options' );
+    if(file_exists(plugin_dir_path( __FILE__) . 'css/'.$options[ "country_redirector_field_location"].".css")){
+      wp_enqueue_style( $options[ "country_redirector_field_location"], plugin_dir_url(__FILE__) . 'css/'.$options[ "country_redirector_field_location"].'.css',1 );
+    }
       wp_enqueue_style( 'country_redirector', plugin_dir_url(__FILE__) . 'css/style.css' );
       wp_enqueue_script('web',plugin_dir_url(__FILE__) . 'js/web.js');
       wp_enqueue_script('jquery');

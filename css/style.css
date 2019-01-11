@@ -1,22 +1,26 @@
 #country_redirector.top_floating{
       position: absolute;
       top: 0px;
-      z-index: 100000;
+      z-index: 1000000;
 }
+
+
 
 #country_redirector{
 
       width: 100%;
+      height: 60px;
       background-color: #313131;
       color: white;
-      padding: 10px 100px;
+      padding: 0px 100px;
       font-size: 15px;
      display: flex;
      -webkit-flex-flow: row wrap;
-  flex-flow: row wrap;
+     flex-flow: row wrap;
      flex-direction: row ;
      justify-content: center;
      align-items: center;
+     font-size: 12px;
 }
 
 
@@ -31,9 +35,10 @@ text-align: center;
 
 #country_redirector .country_select{
 width: 200px;
-height: 35px;
+height: 25px;
 background-color: #575757;
 color: white;
+font-size: 12px;
 }
 
 #country_redirector button{
@@ -43,7 +48,7 @@ color: white;
     font-family: "Open Sans", Helvetica, Arial, "Liberation Sans", sans-serif;
     font-weight: 600;
     display: block;
-    line-height: 34px;
+    line-height: 25px;
     font-size: 13px;
     color: #eee;
         border: none !important;
@@ -77,21 +82,26 @@ color: #6F6F6F;
   background-repeat: no-repeat;
   background-position:15px 0px;
   height: 100%;
-  line-height: 35px;
+  line-height: 25px;
 }
 #country_redirector .country_select a{
-  float: right;
+    float: right;
+}
+#country_redirector>a{
+    position: fixed;
+    top: 10px;
+    right: 10px;
 }
 #country_redirector .country_select a:after{
     background-repeat: no-repeat;
     background-size: 15px 15px;
     display: inline-block;
     width: 20px;
-    height: 28px;
+    height: 19px;
     content:"";
     background-color: #6F6F6F;
-    -webkit-mask:  url('../images/down.svg') no-repeat -0px 9px;
-    mask: url('../images/down.svg') no-repeat -0px 9px;
+    -webkit-mask:  url('../images/down.svg') no-repeat -0px 4px;
+    mask: url('../images/down.svg') no-repeat -0px 4px;
 }
 #country_redirector .drop-down {
  position: relative;
@@ -109,7 +119,7 @@ color: #6F6F6F;
  position: absolute;
  top: 0;
  left: 0;
- z-index: 1000;
+ z-index: 1000000;
  margin-top: 40px;
  padding: 0;
  background-color: #595959;
@@ -123,8 +133,7 @@ color: #6F6F6F;
 
  #country_redirector .drop-down .select-list li span {
  display: inline-block;
- min-height: 40px;
- min-width: 280px;
+  min-width: 280px;
  width: 100%;
  padding: 5px 15px 5px 35px;
  background-color: #595959;
@@ -140,5 +149,6 @@ color: #6F6F6F;
 
  #country_redirector .drop-down .select-list li span:hover,
  #country_redirector .drop-down .select-list li span:focus {
- opacity: 1;
+   opacity: 1;
+   background-color: #313131;
  }

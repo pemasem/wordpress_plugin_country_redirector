@@ -1,0 +1,44 @@
+#country_redirector.top_fixed{
+  position: fixed;
+  top: 0px;
+  z-index: 1000000;
+ border-bottom: 1px solid #212121;
+}
+
+#top-header #country_redirector{
+position: initial;
+top: initial;
+}
+
+#top-header {
+    z-index: 99999999;
+}
+
+
+@media (max-width: 980px){
+  #top-header {
+      display: block !important;
+  }
+  #top-header .container{
+      display: none !important;
+  }
+
+  .admin-bar.et_fixed_nav.et_secondary_nav_only_menu.admin-bar #main-header, .et_non_fixed_nav.et_transparent_nav.et_secondary_nav_only_menu.admin-bar #main-header{
+      top: 92px!important;
+  }
+  .country_redirector.et_fixed_nav_temp #main-header, .country_redirector.et_non_fixed_nav.et_transparent_nav_temp #main-header, .country_redirector.et_secondary_nav_only_menu #main-header{
+      top: 60px!important;
+  }
+  #country_redirector span{
+     flex-basis: 100%;
+  }
+
+}
+@media (max-width: 540px){
+  #country_redirector>span{
+     display: none;
+  }
+  #country_redirector{
+    padding: 0px !important;
+  }
+}

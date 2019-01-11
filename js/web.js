@@ -28,5 +28,25 @@
     {
       jQuery('.drop-down ul li').slideToggle();
     });
-/* End */
-});
+  /* End */
+  });
+  function country_redirector_top_append(){
+    var panel = document.getElementById('country_redirector')
+    document.body.insertBefore(panel, document.body.firstChild);
+  }
+  function country_redirector_top_fixed(){
+    if($('#top-header').length == 0){
+      var find = $('*').filter(function () {
+          if( $(this).css('position') == 'fixed' && $(this).attr('id') != "country_redirector" && $(this).attr('id') != "wpadminbar" && $(this).css('bottom') != "0px"){
+            if($(this).css('top').endsWith("px")){
+                  var new_top = parseFloat($(this).css('top')) + 60;
+                  $(this).css({top: new_top + "px"});
+            }
+          }
+      });
+    }else{
+     $( 'body').addClass("country_redirector");
+      $( '#top-header').prepend($( '#country_redirector'));
+    }
+
+  }
