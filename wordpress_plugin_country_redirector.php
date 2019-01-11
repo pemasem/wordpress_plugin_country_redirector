@@ -24,6 +24,7 @@ function country_redirector_settings_init() {
  add_settings_section('country_redirector_section_detection', __( 'Country Detection', 'country_redirector' ), 'country_redirector_section_detection_cb', 'country_redirector' );
  add_settings_field('country_redirector_field_type', __( 'IP COUNTRY DETECTION', 'country_redirector' ), 'country_redirector_field_type_cb', 'country_redirector', 'country_redirector_section_detection', [ 'label_for' => 'country_redirector_field_type', 'class' => 'country_redirector_row', 'country_redirector_custom_data' => 'custom', ] );
  add_settings_field('country_redirector_field_url', __( 'URL COUNTRY', 'country_redirector' ), 'country_redirector_field_url_cb', 'country_redirector', 'country_redirector_section_detection', [ 'label_for' => 'country_redirector_field_url', 'class' => 'country_redirector_row', 'country_redirector_custom_data' => 'custom', ] );
+ add_settings_field('country_redirector_field_behaviour', __( 'BEHAVIOUR', 'country_redirector' ), 'country_redirector_field_behaviour_cb', 'country_redirector', 'country_redirector_section_detection', [ 'label_for' => 'country_redirector_field_behaviour', 'class' => 'country_redirector_row', 'country_redirector_custom_data' => 'custom', ] );
 
  add_settings_section('country_redirector_section_public', __( 'Public Design', 'country_redirector' ), 'country_redirector_section_public_cb', 'country_redirector' );
   add_settings_field('country_redirector_field_location', __( 'LOCATION', 'country_redirector' ), 'country_redirector_field_location_cb', 'country_redirector', 'country_redirector_section_public', [ 'label_for' => 'country_redirector_field_location', 'class' => 'country_redirector_row', 'country_redirector_custom_data' => 'custom', ] );
@@ -39,7 +40,21 @@ function country_redirector_settings_init() {
 
 
 }
-
+function country_redirector_field_behaviour_cb($args){
+  $options = get_option( 'country_redirector_options' );
+   $checked = isset($options[$args['label_for']."_hide_not_in_redirections"]);
+    ?>
+    <input value="hide_not_in_redirections" <?php if ($checked) echo 'checked="checked"'; ?> type="checkbox" name="country_redirector_options[<?php echo esc_attr( $args['label_for']."_hide_not_in_redirections" ); ?>]" >/es<b>-ES/</b>page.html
+    <p class="description">
+    <?php esc_html_e( 'Hide the control if the country code is not in the redirections list' ); ?>
+    </p>
+    <select name="country_redirector_options[<?php echo esc_attr( $args['label_for']."_hide" ); ?>]">
+      <option <?php echo isset( $options[ $args['label_for'] ] ) ? ( selected( $options[ $args['label_for']."_hide"  ], 'only_your_country_and_global', false ) ) : ( '' ); ?> value="only_your_country_and_global">ONLY YOUR IP COUNTRY AND "GLOBAL" REDIRECTION</option>
+        <option <?php echo isset( $options[ $args['label_for'] ] ) ? ( selected( $options[ $args['label_for']."_hide"  ], 'only_your_country', false ) ) : ( '' ); ?> value="only_your_country">ONLY YOUR IP COUNTRY</option>
+      <option <?php echo isset( $options[ $args['label_for'] ] ) ? ( selected( $options[ $args['label_for']."_hide"  ], 'all_countries', false ) ) : ( '' ); ?> value="all_countries">ALL REDIRECTIONS</option>
+    </select>
+  <?php
+}
 function country_redirector_section_manages_cb(){?>
   <input type="submit" name="save_to_file" value="SAVE TO FILE"><br>
   <input type="submit" name="load_from_file" value="LOAD FROM FILE">
@@ -182,9 +197,7 @@ function country_redirector_field_type_cb( $args ) {
  data-custom="<?php echo esc_attr( $args['country_redirector_custom_data'] ); ?>"
  name="country_redirector_options[<?php echo esc_attr( $args['label_for'] ); ?>]"
  >
- <option value="API" <?php echo isset( $options[ $args['label_for'] ] ) ? ( selected( $options[ $args['label_for'] ], 'API', false ) ) : ( '' ); ?>>
- <?php esc_html_e( 'API', 'country_redirector' ); ?>
- </option>
+
  <option value="FILE" <?php echo isset( $options[ $args['label_for'] ] ) ? ( selected( $options[ $args['label_for'] ], 'FILE', false ) ) : ( '' ); ?>>
  <?php esc_html_e( 'FILE', 'country_redirector' ); ?>
  </option>
@@ -270,26 +283,40 @@ function country_redirector_options_page_html() {
 
 
     $ip = country_redirector_get_visitor_IP();
- 
+    $ip_country = "";
     if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
       $options = get_option( 'country_redirector_options' );
-      //add_action( 'wp_footer',   'country_redirector_footer_info' ,10000 );
       switch ($options["country_redirector_field_type"]) {
         case 'FILE':
           include __DIR__.'/GeoIp2/geoip2.phar';
           $reader = new GeoIp2\Database\Reader( __DIR__ . '/GeoIp2/GeoLite2-Country.mmdb' );
-          $country = $reader->country( $ip);
-           if(is_object($country) && strlen($country->country->isoCode) == 2){
-               if(!country_redirector_detectUrlCountry($country->country->isoCode)){
-                   add_action( 'wp_footer',   'country_redirector_add_country_redirector' , 0 );
-                   add_action( 'get_footer', 'country_redirector_add_footer_styles' );
-               }
+          $c = $reader->country( $ip);
+           if(is_object($c) && strlen($c->country->isoCode) == 2){
+             $ip_country = strtoupper($c->country->isoCode);
            }
 
           break;
         case 'API':
 
         break;
+      }
+      if(strlen($ip_country) == 2 && !country_redirector_detectUrlCountry($ip_country)){
+          $hide = false;
+          if(isset($options["country_redirector_field_redirections_hide_not_in_redirections"])){
+              $hide = true;
+              $options = get_option( 'country_redirector_options' );
+              $redirections = json_decode( $options[ "country_redirector_field_redirections"], true);
+              foreach ($redirections as $key => $value) {
+                if(strtoupper($value["country"]) == $ip_country){
+                  $hide = false;
+                }
+              }
+          }
+          if(!$hide){
+            add_action( 'wp_footer',   'country_redirector_add_country_redirector' , 0 );
+            add_action( 'get_footer', 'country_redirector_add_footer_styles' );
+          }
+
       }
     }
 
@@ -300,7 +327,7 @@ function country_redirector_options_page_html() {
 
     <?php }
 
-  function country_redirector_detectUrlCountry($country){
+  function country_redirector_detectUrlCountry($ip_country){
     $options = get_option( 'country_redirector_options' );
     $redirections = array();
     if(isset($options[ "country_redirector_field_url"])){
@@ -312,19 +339,42 @@ function country_redirector_options_page_html() {
         if(is_array($matches) &&  count($matches) > 0){
           foreach ($matches as $match) {
             if(is_array($match) &&  count($match) > 0){
-              if(strpos($match[0], $country )!== FALSE ){
+              if(strpos($match[0], $ip_country )!== FALSE ){
                 return true;
               }
             }
           }
         }
       }
+
     return false;
   }
   function country_redirector_add_country_redirector() {
-
+    global $ip_country;
     $options = get_option( 'country_redirector_options' );
     $redirections = json_decode( $options[ "country_redirector_field_redirections"], true);
+    switch ($options["country_redirector_field_redirections_hide"]) {
+      case 'only_your_country_and_global':
+         foreach ($redirections as $key => $value) {
+           if(strtoupper($value["country"]) != $ip_country && strtoupper($value["country"]) != "GLOBAL" ){
+             unset($redirections[$key]);
+           }
+         }
+        break;
+      case 'only_your_country_and_global':
+         foreach ($redirections as $key => $value) {
+           if(strtoupper($value["country"]) != $ip_country){
+             unset($redirections[$key]);
+           }
+         }
+        break;
+      case 'all_countries':
+
+      break;
+    }
+
+
+
     ?>
     <div id='country_redirector' class="hide <?=$options[ "country_redirector_field_location"]?>">
       <script type="text/javascript">
