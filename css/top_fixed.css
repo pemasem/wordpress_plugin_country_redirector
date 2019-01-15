@@ -11,9 +11,11 @@ top: initial;
 }
 
 #top-header {
-    z-index: 99999999;
+    z-index: 999999;
 }
-
+#wpadminbar {
+  z-index: 9999999 !important;
+}
 
 @media (max-width: 980px){
   #top-header {

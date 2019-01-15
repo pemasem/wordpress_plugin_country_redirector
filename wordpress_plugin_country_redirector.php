@@ -11,12 +11,13 @@ License URI: https://www.gnu.org/license/gpl-2.0.html
 Text Domain: country_redirector
 */
 
-if ( !defined('ABSPATH') )
-die();
+if ( !defined( 'ABSPATH' ) ) exit;
 
 
 
 function country_redirector_settings_init() {
+  $options = get_option( 'country_redirector_options' );
+
  // register a new setting
  register_setting( 'country_redirector', 'country_redirector_options' );
 
@@ -42,9 +43,10 @@ function country_redirector_settings_init() {
 }
 function country_redirector_field_behaviour_cb($args){
   $options = get_option( 'country_redirector_options' );
+
    $checked = isset($options[$args['label_for']."_hide_not_in_redirections"]);
     ?>
-    <input value="hide_not_in_redirections" <?php if ($checked) echo 'checked="checked"'; ?> type="checkbox" name="country_redirector_options[<?php echo esc_attr( $args['label_for']."_hide_not_in_redirections" ); ?>]" >/es<b>-ES/</b>page.html
+    <input value="hide_not_in_redirections" <?php if ($checked) echo 'checked="checked"'; ?> type="checkbox" name="country_redirector_options[<?php echo esc_attr( $args['label_for']."_hide_not_in_redirections" ); ?>]" >Hide Not Listed Country
     <p class="description">
     <?php esc_html_e( 'Hide the control if the country code is not in the redirections list' ); ?>
     </p>
@@ -60,23 +62,35 @@ function country_redirector_section_manages_cb(){?>
   <input type="submit" name="load_from_file" value="LOAD FROM FILE">
   <input type="file" name="config" value="LOAD FROM FILE">
 <?php }
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  if(isset($_POST["load_from_file"])){
 
-if(isset($_POST["load_from_file"])){
+        $file_data = file_get_contents($_FILES["config"]["tmp_name"]);
 
-       $file_data = file_get_contents($_FILES["config"]["tmp_name"]);
-      $data = json_decode( $file_data, true);
-      if(is_array($data)){
-        update_option( 'country_redirector_options',$data );
-      }
-}
-if(isset($_POST["save_to_file"])){
-  file_put_contents(plugin_dir_path( __FILE__) . 'js/country_redirector.json', json_encode( $_POST["country_redirector_options"] ));
-  $file = plugin_dir_path( __FILE__) . 'js/country_redirector.json';
-  header('Content-type: text/plain');
-  header('Content-Length: '.filesize($file));
-  header('Content-Disposition: attachment; filename=country_redirector.json');
-  readfile($file);
-    exit;
+
+        $data = json_decode( $file_data, true);
+
+        if(is_array($data)){
+
+          update_option( 'country_redirector_options',$data );
+
+         $options = get_option( 'country_redirector_options' );
+
+
+        }else{
+          add_settings_error( 'country_redirector_messages', 'country_redirector_message', __( 'File is not a valid json', 'country_redirector' ), 'error' );
+        }
+  }
+  if(isset($_POST["save_to_file"])){
+    file_put_contents(plugin_dir_path( __FILE__) . 'js/country_redirector.json', json_encode( $_POST["country_redirector_options"] ));
+    $file = plugin_dir_path( __FILE__) . 'js/country_redirector.json';
+    header('Content-type: text/plain');
+    header('Content-Length: '.filesize($file));
+    header('Content-Disposition: attachment; filename=country_redirector.json');
+    readfile($file);
+      exit;
+  }
+
 }
 
 
@@ -107,6 +121,7 @@ function country_redirector_field_location_cb($args){
 
 function country_redirector_field_redirections_cb($args){
   $options = get_option( 'country_redirector_options' );
+
   $redirections = array();
   if(isset($options[ $args['label_for']])){
     $redirections = json_decode( $options[ $args['label_for']], true);
@@ -121,6 +136,7 @@ function country_redirector_field_redirections_cb($args){
    document.getElementById("redirections_value").value = JSON.stringify(redirections);
    return true;
   }
+
   function delRedirection(id){
     redirections.forEach(function(value,index){
       if(value.id ==id ){
@@ -131,6 +147,7 @@ function country_redirector_field_redirections_cb($args){
     });
 
   }
+
   function updateRedirection(index,field,new_value){
     redirections[index][field]  = new_value;
 
@@ -245,7 +262,7 @@ function country_redirector_options_page_html() {
  ?>
  <div class="wrap">
  <h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
- <form action="options.php" method="post" enctype="multipart/form-data">
+ <form  action method="post" enctype="multipart/form-data">
  <?php
  // output security fields for the registered setting "wporg"
  settings_fields( 'country_redirector' );
@@ -353,7 +370,7 @@ function country_redirector_options_page_html() {
     global $ip_country;
     $options = get_option( 'country_redirector_options' );
     $redirections = json_decode( $options[ "country_redirector_field_redirections"], true);
-    switch ($options["country_redirector_field_redirections_hide"]) {
+    switch ($options["country_redirector_field_behaviour_hide"]) {
       case 'only_your_country_and_global':
          foreach ($redirections as $key => $value) {
            if(strtoupper($value["country"]) != $ip_country && strtoupper($value["country"]) != "GLOBAL" ){
@@ -386,16 +403,13 @@ function country_redirector_options_page_html() {
               if($options[ "country_redirector_field_location"] == "top_append"){?>
                   country_redirector_top_append();
               <?php }elseif($options[ "country_redirector_field_location"] =="top_fixed"){?>
-
                  country_redirector_top_fixed();
-
-
               <?php } ?>
               document.getElementById('country_redirector').classList.remove("hide");
           }
       }
       </script>
-    <span><?=$options["country_redirector_field_info"]?></span>
+    <span><?= __($options["country_redirector_field_info"]);?></span>
     <div class="drop-down">
       <select id="country_redirector_select">
         <?php
@@ -411,8 +425,8 @@ function country_redirector_options_page_html() {
           <?php } ?>
       </select>
     </div>
-    <button onclick="var r = document.getElementById('country_redirector_select').value; window.location.href = r;"><?=$options["country_redirector_field_button"]?></button>
-    <a href="#" onclick="document.getElementById('country_redirector').remove();sessionStorage.setItem('country_redirector_hide', true);">X</a>
+    <button  country=<?php echo "a:".$ip_country;?> onclick="country_redirector_redirect(document.getElementById('country_redirector_select').value);return false;"><?= __($options["country_redirector_field_button"]);?></button>
+    <a href="#" onclick="country_redirector_hide();return false;">X</a>
     </div>
     <?php
   }

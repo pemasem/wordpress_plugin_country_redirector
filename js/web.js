@@ -50,3 +50,11 @@
     }
 
   }
+function country_redirector_redirect(r){
+   window.location.href = r;
+}
+function country_redirector_hide(){
+  document.getElementById('country_redirector').remove();
+  $(window).trigger('resize');
+  sessionStorage.setItem('country_redirector_hide', true);
+}
