@@ -51,10 +51,21 @@ function country_redirector_field_behaviour_cb($args){
     <?php esc_html_e( 'Hide the control if the country code is not in the redirections list' ); ?>
     </p>
     <select name="country_redirector_options[<?php echo esc_attr( $args['label_for']."_hide" ); ?>]">
-      <option <?php echo isset( $options[ $args['label_for'] ] ) ? ( selected( $options[ $args['label_for']."_hide"  ], 'only_your_country_and_global', false ) ) : ( '' ); ?> value="only_your_country_and_global">ONLY YOUR IP COUNTRY AND "GLOBAL" REDIRECTION</option>
-        <option <?php echo isset( $options[ $args['label_for'] ] ) ? ( selected( $options[ $args['label_for']."_hide"  ], 'only_your_country', false ) ) : ( '' ); ?> value="only_your_country">ONLY YOUR IP COUNTRY</option>
-      <option <?php echo isset( $options[ $args['label_for'] ] ) ? ( selected( $options[ $args['label_for']."_hide"  ], 'all_countries', false ) ) : ( '' ); ?> value="all_countries">ALL REDIRECTIONS</option>
+      <option <?php echo isset( $options[ $args['label_for']."_hide"  ] ) ? ( selected( $options[ $args['label_for']."_hide"  ], 'only_your_country_and_global', false ) ) : ( '' ); ?> value="only_your_country_and_global">ONLY YOUR IP COUNTRY AND "GLOBAL" REDIRECTION</option>
+        <option <?php echo isset( $options[ $args['label_for']."_hide"  ] ) ? ( selected( $options[ $args['label_for']."_hide"  ], 'only_your_country', false ) ) : ( '' ); ?> value="only_your_country">ONLY YOUR IP COUNTRY</option>
+      <option <?php echo isset( $options[ $args['label_for']."_hide"  ] ) ? ( selected( $options[ $args['label_for']."_hide"  ], 'all_countries', false ) ) : ( '' ); ?> value="all_countries">ALL REDIRECTIONS</option>
     </select>
+    <p class="description">
+    <?php esc_html_e( 'Country list control' ); ?>
+    </p>
+    <select name="country_redirector_options[<?php echo esc_attr( $args['label_for']."_save" ); ?>]">
+      <option <?php echo isset( $options[ $args['label_for']."_save" ] ) ? ( selected( $options[ $args['label_for']."_save"  ], 'sessionStorage', false ) ) : ( '' ); ?> value="sessionStorage">SAVE IN SESSION (reset when the navigator is closed)</option>
+      <option <?php echo isset( $options[ $args['label_for']."_save" ] ) ? ( selected( $options[ $args['label_for']."_save"  ], 'localStorage', false ) ) : ( '' ); ?> value="localStorage">SAVE LOCALLY (saved in your navigator, not in others)</option>
+      <option <?php echo isset( $options[ $args['label_for']."_save" ] ) ? ( selected( $options[ $args['label_for']."_save"  ], 'cookies', false ) ) : ( '' ); ?> value="cookies">SAVE IN A COOKIE (saved for all your browsers in your computer, not in others)</option>
+    </select>
+    <p class="description">
+    <?php esc_html_e( 'Where the user selection is saved' ); ?>
+    </p>
   <?php
 }
 function country_redirector_section_manages_cb(){?>
@@ -63,22 +74,22 @@ function country_redirector_section_manages_cb(){?>
   <input type="file" name="config" value="LOAD FROM FILE">
 <?php }
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+if(isset($_POST["submit"])){
+
+  update_option( 'country_redirector_options',$_POST["country_redirector_options"] );
+
+ $options = get_option( 'country_redirector_options' );
+}
   if(isset($_POST["load_from_file"])){
 
         $file_data = file_get_contents($_FILES["config"]["tmp_name"]);
 
-
         $data = json_decode( $file_data, true);
 
         if(is_array($data)){
-
           update_option( 'country_redirector_options',$data );
-
-         $options = get_option( 'country_redirector_options' );
-
-
-        }else{
-          add_settings_error( 'country_redirector_messages', 'country_redirector_message', __( 'File is not a valid json', 'country_redirector' ), 'error' );
+          $options = get_option( 'country_redirector_options' );
         }
   }
   if(isset($_POST["save_to_file"])){
@@ -208,6 +219,8 @@ function country_redirector_field_url_cb($args){
 function country_redirector_field_type_cb( $args ) {
  // get the value of the setting we've registered with register_setting()
  $options = get_option( 'country_redirector_options' );
+
+
  // output the field
  ?>
  <select id="<?php echo esc_attr( $args['label_for'] ); ?>"
@@ -216,15 +229,18 @@ function country_redirector_field_type_cb( $args ) {
  >
 
  <option value="FILE" <?php echo isset( $options[ $args['label_for'] ] ) ? ( selected( $options[ $args['label_for'] ], 'FILE', false ) ) : ( '' ); ?>>
+
  <?php esc_html_e( 'FILE', 'country_redirector' ); ?>
  </option>
+ <option value="API" <?php echo isset( $options[ $args['label_for'] ] ) ? ( selected( $options[ $args['label_for'] ], 'API', false ) ) : ( '' ); ?>>
+   <?php esc_html_e( 'API', 'country_redirector' ); ?>
+   </option>
  </select>
  <p class="description">
- <?php esc_html_e( 'Get the IP country from a third party API', 'country_redirector' ); ?>
+ <?php esc_html_e( 'Test a country (iso2):', 'country_redirector' ); ?>
  </p>
- <p class="description">
- <?php esc_html_e( 'Get the IP country from a file.', 'country_redirector' ); ?>
- </p>
+
+ <input type="text" value="<?=isset($options[ $args['label_for']."_country_test" ])?$options[ $args['label_for']."_country_test" ]:"";?>" name ="country_redirector_options[<?php echo esc_attr( $args['label_for'] ); ?>_country_test]">
  <?php
 }
 
@@ -300,6 +316,9 @@ function country_redirector_options_page_html() {
 
 
     $ip = country_redirector_get_visitor_IP();
+      if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+        $ip = '79.158.130.183';
+      }
     $ip_country = "";
     if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
       $options = get_option( 'country_redirector_options' );
@@ -317,9 +336,10 @@ function country_redirector_options_page_html() {
 
         break;
       }
+
       if(strlen($ip_country) == 2 && !country_redirector_detectUrlCountry($ip_country)){
           $hide = false;
-          if(isset($options["country_redirector_field_redirections_hide_not_in_redirections"])){
+          if(isset($options["country_redirector_field_behaviour_hide_not_in_redirections"])){
               $hide = true;
               $options = get_option( 'country_redirector_options' );
               $redirections = json_decode( $options[ "country_redirector_field_redirections"], true);
@@ -396,9 +416,46 @@ function country_redirector_options_page_html() {
     <div id='country_redirector' class="hide <?=$options[ "country_redirector_field_location"]?>">
       <script type="text/javascript">
         window.onload = function(){
-          var country_redirector_hide = sessionStorage.getItem("country_redirector_hide");
-          if(!country_redirector_hide){
+          <?php
+          if(!isset($options["country_redirector_field_behaviour_save"])){
+            $options["country_redirector_field_behaviour_save"] = "sessionStorage";
+          }?>
+          var r = "";
+          var country_redirector_hide = false;
+          <?php
+          switch ($options["country_redirector_field_behaviour_save"]) {
+            case 'sessionStorage':?>
+                 country_redirector_hide = sessionStorage.getItem("country_redirector_hide");
+                 r = sessionStorage.getItem("country_redirector_redirect");
+            <?php  break;
+            case 'localStorage':?>
+                 country_redirector_hide = localStorage.getItem("country_redirector_hide");
+                 r = localStorage.getItem("country_redirector_redirect");
+            <?php  break;
+            case 'cookies':?>
+              var x = document.cookie;
+              var ca = document.cookie.split(';');
+              for(var i = 0; i < ca.length; i++) {
+                var c = ca[i];
+                var value = "";
+                while (c.charAt(0) == ' ') {
+                  c = c.substring(1);
+                }
+                if (c.indexOf('country_redirector_hide=') == 0) {
+                  value =  c.substring('country_redirector_hide='.length, c.length);
+                  country_redirector_hide = (value == 1)? true : false;
+                }
+                if (c.indexOf('country_redirector_redirect=') == 0) {
+                  r =  c.substring('country_redirector_hide='.length, c.length);
+                }
+              }
 
+            <?php  break;
+          } ?>
+          if( r != ""){            
+            country_redirector_redirect(r);
+          }
+          if(!country_redirector_hide){
             <?php
               if($options[ "country_redirector_field_location"] == "top_append"){?>
                   country_redirector_top_append();
