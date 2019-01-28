@@ -317,7 +317,7 @@ function country_redirector_options_page_html() {
 
     $ip = country_redirector_get_visitor_IP();
       if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
-        $ip = '79.158.130.183';
+        $ip = '160.178.35.51';
       }
     $ip_country = "";
     if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
@@ -338,7 +338,7 @@ function country_redirector_options_page_html() {
           break;
         }
       }
-
+die($ip);
 
       if(strlen($ip_country) == 2 && !country_redirector_detectUrlCountry($ip_country)){
           $hide = false;
