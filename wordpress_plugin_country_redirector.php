@@ -75,13 +75,13 @@ function country_redirector_section_manages_cb(){?>
 <?php }
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-if(isset($_POST["submit"])){
+if(isset($_POST["submit"]) && isset($_POST["country_redirector_options"])){
 
   update_option( 'country_redirector_options',$_POST["country_redirector_options"] );
 
  $options = get_option( 'country_redirector_options' );
 }
-  if(isset($_POST["load_from_file"])){
+  if(isset($_POST["load_from_file"]) && isset($_FILES["config"])){
 
         $file_data = file_get_contents($_FILES["config"]["tmp_name"]);
 
@@ -92,7 +92,7 @@ if(isset($_POST["submit"])){
           $options = get_option( 'country_redirector_options' );
         }
   }
-  if(isset($_POST["save_to_file"])){
+  if(isset($_POST["save_to_file"]) && isset($_POST["country_redirector_options"] )){
     file_put_contents(plugin_dir_path( __FILE__) . 'js/country_redirector.json', json_encode( $_POST["country_redirector_options"] ));
     $file = plugin_dir_path( __FILE__) . 'js/country_redirector.json';
     header('Content-type: text/plain');
@@ -322,20 +322,23 @@ function country_redirector_options_page_html() {
     $ip_country = "";
     if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
       $options = get_option( 'country_redirector_options' );
-      switch ($options["country_redirector_field_type"]) {
-        case 'FILE':
-          include __DIR__.'/GeoIp2/geoip2.phar';
-          $reader = new GeoIp2\Database\Reader( __DIR__ . '/GeoIp2/GeoLite2-Country.mmdb' );
-          $c = $reader->country( $ip);
-           if(is_object($c) && strlen($c->country->isoCode) == 2){
-             $ip_country = strtoupper($c->country->isoCode);
-           }
+      if(isset($options["country_redirector_field_type"])){
+        switch ($options["country_redirector_field_type"]) {
+          case 'FILE':
+            include __DIR__.'/GeoIp2/geoip2.phar';
+            $reader = new GeoIp2\Database\Reader( __DIR__ . '/GeoIp2/GeoLite2-Country.mmdb' );
+            $c = $reader->country( $ip);
+             if(is_object($c) && strlen($c->country->isoCode) == 2){
+               $ip_country = strtoupper($c->country->isoCode);
+             }
+
+            break;
+          case 'API':
 
           break;
-        case 'API':
-
-        break;
+        }
       }
+
 
       if(strlen($ip_country) == 2 && !country_redirector_detectUrlCountry($ip_country)){
           $hide = false;
@@ -452,7 +455,7 @@ function country_redirector_options_page_html() {
 
             <?php  break;
           } ?>
-          if( r != ""){            
+          if( r != ""){
             country_redirector_redirect(r);
           }
           if(!country_redirector_hide){
