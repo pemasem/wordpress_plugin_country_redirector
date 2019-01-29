@@ -75,12 +75,12 @@ function country_redirector_section_manages_cb(){?>
 <?php }
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-if(isset($_POST["submit"]) && isset($_POST["country_redirector_options"])){
+  if((isset($_POST["submit"]) || isset($_POST["add"]) || isset($_POST["del"])) && isset($_POST["country_redirector_options"])){
 
-  update_option( 'country_redirector_options',$_POST["country_redirector_options"] );
+    update_option( 'country_redirector_options',$_POST["country_redirector_options"] );
 
- $options = get_option( 'country_redirector_options' );
-}
+   $options = get_option( 'country_redirector_options' );
+  }
   if(isset($_POST["load_from_file"]) && isset($_FILES["config"])){
 
         $file_data = file_get_contents($_FILES["config"]["tmp_name"]);
@@ -184,12 +184,12 @@ function country_redirector_field_redirections_cb($args){
     <label style="text-align: right;display: inline-block;width:15%;margin-right:1%">Redirection</label><input style="width:80%" onchange="updateRedirection(<?=$index?>,'redirect',this.value);return false;" value="<?=$redirection["redirect"]?>">
     <br>
     <label style="text-align: right;display: inline-block;width:15%;margin-right:1%">Icon</label><input style="width:80%" onchange="updateRedirection(<?=$index?>,'icon',this.value);return false;" value="<?=$redirection["icon"]?>">
-    <button class="btn btn-danger" onclick=" delRedirection(<?=$redirection["id"]?>); " style="float:right">-</button>
+    <button class="btn btn-danger" name="del" onclick=" delRedirection(<?=$redirection["id"]?>); " style="float:right">-</button>
     </div>
   <?php }
   ?>
   </div>
-  <button class="btn btn-primary" onclick="addNewRedirection();" style="float:left;margin-top:20px">NEW REDIRECTION</button>
+  <button class="btn btn-primary" name="add" onclick="addNewRedirection();" style="float:left;margin-top:20px">NEW REDIRECTION</button>
   <?php
 }
 function country_redirector_field_button_cb($args){
@@ -313,52 +313,71 @@ function country_redirector_options_page_html() {
    	return $ip;
    }
 
+   $ip_country = "";
+   function country_redirector_init(){
+     global $ip_country;
+     $ip = country_redirector_get_visitor_IP();
+       if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+         $ip = '20.190.129.0';
+       }
 
+     if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+       $options = get_option( 'country_redirector_options' );
 
-    $ip = country_redirector_get_visitor_IP();
-      if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
-        $ip = '160.178.35.51';
-      }
-    $ip_country = "";
-    if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
-      $options = get_option( 'country_redirector_options' );
-      if(isset($options["country_redirector_field_type"])){
-        switch ($options["country_redirector_field_type"]) {
-          case 'FILE':
-            include __DIR__.'/GeoIp2/geoip2.phar';
-            $reader = new GeoIp2\Database\Reader( __DIR__ . '/GeoIp2/GeoLite2-Country.mmdb' );
-            $c = $reader->country( $ip);
-             if(is_object($c) && strlen($c->country->isoCode) == 2){
-               $ip_country = strtoupper($c->country->isoCode);
-             }
+       if(isset($options["country_redirector_field_type"])){
+         switch ($options["country_redirector_field_type"]) {
+           case 'FILE':
+             include __DIR__.'/GeoIp2/geoip2.phar';
+             $reader = new GeoIp2\Database\Reader( __DIR__ . '/GeoIp2/GeoLite2-Country.mmdb' );
+             $c = $reader->country( $ip);
 
-            break;
-          case 'API':
+              if(is_object($c) && strlen($c->country->isoCode) == 2){
+                $ip_country = strtoupper($c->country->isoCode);
 
-          break;
-        }
-      }
-die($ip);
-
-      if(strlen($ip_country) == 2 && !country_redirector_detectUrlCountry($ip_country)){
-          $hide = false;
-          if(isset($options["country_redirector_field_behaviour_hide_not_in_redirections"])){
-              $hide = true;
-              $options = get_option( 'country_redirector_options' );
-              $redirections = json_decode( $options[ "country_redirector_field_redirections"], true);
-              foreach ($redirections as $key => $value) {
-                if(strtoupper($value["country"]) == $ip_country){
-                  $hide = false;
-                }
+              }else{
+                $ch = curl_init('http://api.ipapi.com/'.$ip.'?access_key=d55722d1ba0708ff6d292f50458287b9');
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                $json = curl_exec($ch);
+                curl_close($ch);
+                //country_redirector_log_console($json);
+                $api_result = json_decode($json, true);
+                $ip_country =  $api_result['country_code'];
               }
-          }
-          if(!$hide){
-            add_action( 'wp_footer',   'country_redirector_add_country_redirector' , 0 );
-            add_action( 'get_footer', 'country_redirector_add_footer_styles' );
-          }
 
-      }
-    }
+             break;
+           case 'API':
+           // Initialize CURL:
+           $ch = curl_init('http://api.ipapi.com/'.$ip.'?access_key=d55722d1ba0708ff6d292f50458287b9');
+           curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+           $json = curl_exec($ch);
+           curl_close($ch);
+           $api_result = json_decode($json, true);
+           $ip_country =  $api_result['country_code'];
+           break;
+         }
+       }
+       if(strlen($ip_country) == 2 && !country_redirector_detectUrlCountry($ip_country)){
+           $hide = false;
+           if(isset($options["country_redirector_field_behaviour_hide_not_in_redirections"])){
+               $hide = true;
+               $options = get_option( 'country_redirector_options' );
+               $redirections = json_decode( $options[ "country_redirector_field_redirections"], true);
+               foreach ($redirections as $key => $value) {
+                 if(strtoupper($value["country"]) == $ip_country){
+                   $hide = false;
+                 }
+               }
+           }
+           if(!$hide){
+             add_action( 'wp_footer',   'country_redirector_add_country_redirector' , 0 );
+             add_action( 'get_footer', 'country_redirector_add_footer_styles' );
+           }
+
+       }
+     }
+       //country_redirector_log_console($ip_country);
+   }
+    add_action( 'init', 'country_redirector_init' );
 
 
     function country_redirector_footer_info(){
@@ -389,19 +408,35 @@ die($ip);
 
     return false;
   }
+  function country_redirector_log_console($vale){?>
+      <script type="text/javascript">
+      console.log('<?=$vale?>');
+      </script>
+  <?php }
+
   function country_redirector_add_country_redirector() {
     global $ip_country;
     $options = get_option( 'country_redirector_options' );
     $redirections = json_decode( $options[ "country_redirector_field_redirections"], true);
     switch ($options["country_redirector_field_behaviour_hide"]) {
       case 'only_your_country_and_global':
+        $global = "";
          foreach ($redirections as $key => $value) {
-           if(strtoupper($value["country"]) != $ip_country && strtoupper($value["country"]) != "GLOBAL" ){
-             unset($redirections[$key]);
+           if(strtoupper($value["country"]) == "GLOBAL" ){
+             $global = $value;
+              unset($redirections[$key]);
+           }else{
+             if(strtoupper($value["country"]) != $ip_country ){
+
+               unset($redirections[$key]);
+             }
            }
          }
+         if($global != ""){
+           $redirections["global"] = $global;
+         }
         break;
-      case 'only_your_country_and_global':
+      case 'only_your_country':
          foreach ($redirections as $key => $value) {
            if(strtoupper($value["country"]) != $ip_country){
              unset($redirections[$key]);
@@ -455,9 +490,11 @@ die($ip);
 
             <?php  break;
           } ?>
+          <?php if(!is_user_logged_in()){?>
           if( r != ""){
             country_redirector_redirect(r);
           }
+          <?php }?>
           if(!country_redirector_hide){
             <?php
               if($options[ "country_redirector_field_location"] == "top_append"){?>
