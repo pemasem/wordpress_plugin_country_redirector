@@ -73,34 +73,34 @@ function country_redirector_section_manages_cb(){?>
   <input type="submit" name="load_from_file" value="LOAD FROM FILE">
   <input type="file" name="config" value="LOAD FROM FILE">
 <?php }
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-  if((isset($_POST["submit"]) || isset($_POST["add"]) || isset($_POST["del"])) && isset($_POST["country_redirector_options"])){
+    if((isset($_POST["submit"]) || isset($_POST["add"]) || isset($_POST["del"])) && isset($_POST["country_redirector_options"])){
 
-    update_option( 'country_redirector_options',$_POST["country_redirector_options"] );
+      update_option( 'country_redirector_options',$_POST["country_redirector_options"] );
 
-   $options = get_option( 'country_redirector_options' );
-  }
-  if(isset($_POST["load_from_file"]) && isset($_FILES["config"])){
+     $options = get_option( 'country_redirector_options' );
+    }
+    if(isset($_POST["load_from_file"]) && isset($_FILES["config"])){
 
-        $file_data = file_get_contents($_FILES["config"]["tmp_name"]);
+          $file_data = file_get_contents($_FILES["config"]["tmp_name"]);
 
-        $data = json_decode( $file_data, true);
+          $data = json_decode( $file_data, true);
 
-        if(is_array($data)){
-          update_option( 'country_redirector_options',$data );
-          $options = get_option( 'country_redirector_options' );
-        }
-  }
-  if(isset($_POST["save_to_file"]) && isset($_POST["country_redirector_options"] )){
-    file_put_contents(plugin_dir_path( __FILE__) . 'js/country_redirector.json', json_encode( $_POST["country_redirector_options"] ));
-    $file = plugin_dir_path( __FILE__) . 'js/country_redirector.json';
-    header('Content-type: text/plain');
-    header('Content-Length: '.filesize($file));
-    header('Content-Disposition: attachment; filename=country_redirector.json');
-    readfile($file);
-      exit;
-  }
+          if(is_array($data)){
+            update_option( 'country_redirector_options',$data );
+            $options = get_option( 'country_redirector_options' );
+          }
+    }
+    if(isset($_POST["save_to_file"]) && isset($_POST["country_redirector_options"] )){
+      file_put_contents(plugin_dir_path( __FILE__) . 'js/country_redirector.json', json_encode( $_POST["country_redirector_options"] ));
+      $file = plugin_dir_path( __FILE__) . 'js/country_redirector.json';
+      header('Content-type: text/plain');
+      header('Content-Length: '.filesize($file));
+      header('Content-Disposition: attachment; filename=country_redirector.json');
+      readfile($file);
+        exit;
+    }
 
 }
 
@@ -279,6 +279,7 @@ function country_redirector_options_page_html() {
  <div class="wrap">
  <h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
  <form  action method="post" enctype="multipart/form-data">
+   <input type="hidden" name="_nonce" value="<?php echo wp_create_nonce( "country_redirector" ); ?>">
  <?php
  // output security fields for the registered setting "wporg"
  settings_fields( 'country_redirector' );
@@ -328,7 +329,12 @@ function country_redirector_options_page_html() {
          switch ($options["country_redirector_field_type"]) {
            case 'FILE':
              include __DIR__.'/GeoIp2/geoip2.phar';
-             $reader = new GeoIp2\Database\Reader( __DIR__ . '/GeoIp2/GeoLite2-Country.mmdb' );
+             if(file_exists(__DIR__ . '/GeoIp2/a.mmdb' )){
+               $reader = new GeoIp2\Database\Reader( __DIR__ . '/GeoIp2/a.mmdb' );
+             }else{
+               $reader = new GeoIp2\Database\Reader( __DIR__ . '/GeoIp2/GeoLite2-Country.mmdb' );
+             }
+
              $c = $reader->country( $ip);
 
               if(is_object($c) && strlen($c->country->isoCode) == 2){
@@ -473,6 +479,7 @@ function country_redirector_options_page_html() {
             case 'cookies':?>
               var x = document.cookie;
               var ca = document.cookie.split(';');
+
               for(var i = 0; i < ca.length; i++) {
                 var c = ca[i];
                 var value = "";
@@ -483,15 +490,18 @@ function country_redirector_options_page_html() {
                   value =  c.substring('country_redirector_hide='.length, c.length);
                   country_redirector_hide = (value == 1)? true : false;
                 }
-                if (c.indexOf('country_redirector_redirect=') == 0) {
-                  r =  c.substring('country_redirector_hide='.length, c.length);
+                if (c.indexOf('wordpress_country_redirector_redirect=') == 0) {
+                  r =  c.substring('wordpress_country_redirector_redirect='.length, c.length);
                 }
               }
 
             <?php  break;
-          } ?>
+          }
+
+
+          ?>
           <?php if(!is_user_logged_in()){?>
-          if( r != ""){
+          if( r != ""  ){
             country_redirector_redirect(r);
           }
           <?php }?>

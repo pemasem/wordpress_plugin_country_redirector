@@ -50,12 +50,23 @@
     }
 
   }
+function country_redirector_ignore(){
+  sessionStorage.removeItem('country_redirector_redirect');
+  localStorage.removeItem('country_redirector_redirect');
+  var d = new Date();
+  d.setTime(d.getTime() - (365*24*60*60*1000));
+  var expires = "expires="+d.toUTCString();
+  document.cookie = "wordpress_country_redirector_redirect" + "=ignored;path=/;expires=" + expires;
+  country_redirector_hide();
+}
 function country_redirector_redirect(r){
   sessionStorage.setItem('country_redirector_redirect', r);
   localStorage.setItem('country_redirector_redirect', r);
-  document.cookie = "country_redirector_redirect" + "=" +r;
-  console.log("country_redirector_redirect" + "=" + r);
-   window.location.href = r;
+  var d = new Date();
+  d.setTime(d.getTime() + (365*24*60*60*1000));
+  var expires = "expires="+d.toUTCString();
+  document.cookie = "wordpress_country_redirector_redirect" + "=" +r+";path=/;expires=" + expires;
+  window.location.href = r;
 }
 function country_redirector_hide(){
   document.getElementById('country_redirector').remove();
