@@ -13,9 +13,37 @@ Text Domain: country_redirector
 
 if ( !defined( 'ABSPATH' ) ) exit;
 
+error_reporting(-1); // reports all errors
+ini_set("display_errors", "1"); // shows all errors
 
 
 function country_redirector_settings_init() {
+  if ($_SERVER['REQUEST_METHOD'] === 'POST' && wp_verify_nonce( $_POST['_nonce'], 'country_redirector' )) {
+
+    if((isset($_POST["submit"]) || isset($_POST["add"]) || isset($_POST["del"])) && isset($_POST["country_redirector_options"])){
+      update_option( 'country_redirector_options',$_POST["country_redirector_options"] );
+        $options = get_option( 'country_redirector_options' );
+
+    }
+    if(isset($_POST["load_from_file"]) && isset($_FILES["config"])){
+
+
+          $file_data = file_get_contents($_FILES["config"]["tmp_name"]);
+          $data = json_decode( $file_data, true);
+          if(is_array($data)){
+            update_option( 'country_redirector_options',$data );
+          }
+    }
+    if(isset($_POST["save_to_file"]) && isset($_POST["country_redirector_options"] )){
+      file_put_contents(plugin_dir_path( __FILE__) . 'js/country_redirector.json', json_encode( $_POST["country_redirector_options"] ));
+      $file = plugin_dir_path( __FILE__) . 'js/country_redirector.json';
+      header('Content-type: text/plain');
+      header('Content-Length: '.filesize($file));
+      header('Content-Disposition: attachment; filename=country_redirector.json');
+      readfile($file);
+        exit;
+    }
+  }
   $options = get_option( 'country_redirector_options' );
 
  // register a new setting
@@ -37,7 +65,6 @@ function country_redirector_settings_init() {
 
 
  add_settings_section('country_redirector_section_manage', __( 'Manage', 'country_redirector' ), 'country_redirector_section_manages_cb', 'country_redirector' );
-
 
 
 }
@@ -72,36 +99,7 @@ function country_redirector_section_manages_cb(){?>
   <input type="submit" name="save_to_file" value="SAVE TO FILE"><br>
   <input type="submit" name="load_from_file" value="LOAD FROM FILE">
   <input type="file" name="config" value="LOAD FROM FILE">
-<?php }
-  if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
-    if((isset($_POST["submit"]) || isset($_POST["add"]) || isset($_POST["del"])) && isset($_POST["country_redirector_options"])){
-
-      update_option( 'country_redirector_options',$_POST["country_redirector_options"] );
-
-     $options = get_option( 'country_redirector_options' );
-    }
-    if(isset($_POST["load_from_file"]) && isset($_FILES["config"])){
-
-          $file_data = file_get_contents($_FILES["config"]["tmp_name"]);
-
-          $data = json_decode( $file_data, true);
-
-          if(is_array($data)){
-            update_option( 'country_redirector_options',$data );
-            $options = get_option( 'country_redirector_options' );
-          }
-    }
-    if(isset($_POST["save_to_file"]) && isset($_POST["country_redirector_options"] )){
-      file_put_contents(plugin_dir_path( __FILE__) . 'js/country_redirector.json', json_encode( $_POST["country_redirector_options"] ));
-      $file = plugin_dir_path( __FILE__) . 'js/country_redirector.json';
-      header('Content-type: text/plain');
-      header('Content-Length: '.filesize($file));
-      header('Content-Disposition: attachment; filename=country_redirector.json');
-      readfile($file);
-        exit;
-    }
-
+<?php
 }
 
 
@@ -132,11 +130,22 @@ function country_redirector_field_location_cb($args){
 
 function country_redirector_field_redirections_cb($args){
   $options = get_option( 'country_redirector_options' );
+  print_r($args['label_for']);
+  print_r($options);
 
   $redirections = array();
-  if(isset($options[ $args['label_for']])){
-    $redirections = json_decode( $options[ $args['label_for']], true);
+  if(isset($options[ $args['label_for']]) ){
+    $redirections = json_decode( html_entity_decode($options[ $args['label_for']]), true);
+    print_r($options[ $args['label_for']]);
+
+    if(!is_array($redirections)){
+      $redirections = array();
+    }
+  }else{
+      print_r("NOO");
   }
+  print_r($redirections);
+  die();
   ?>
   <script type="text/javascript">
   var redirections  = <?php echo json_encode( $redirections ) ?>;
@@ -279,6 +288,7 @@ function country_redirector_options_page_html() {
  <div class="wrap">
  <h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
  <form  action method="post" enctype="multipart/form-data">
+
    <input type="hidden" name="_nonce" value="<?php echo wp_create_nonce( "country_redirector" ); ?>">
  <?php
  // output security fields for the registered setting "wporg"
@@ -502,7 +512,7 @@ function country_redirector_options_page_html() {
           ?>
           <?php if(!is_user_logged_in()){?>
           if( r != ""  ){
-            country_redirector_redirect(r);
+            //country_redirector_redirect(r); NUNCA DEBE REDIRIGIR DE FORMA AUTOMÁTICA (o poner oción)
           }
           <?php }?>
           if(!country_redirector_hide){

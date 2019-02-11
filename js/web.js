@@ -12,6 +12,7 @@
           if (jQuery(this).find('span').text() == jQuery('.drop-down select').find(':selected').text()) {
           jQuery(this).addClass('active');
         }
+
     });
     jQuery('.drop-down .select-list span').on('click', function()
     {
@@ -69,8 +70,11 @@ function country_redirector_redirect(r){
   window.location.href = r;
 }
 function country_redirector_hide(){
+
   document.getElementById('country_redirector').remove();
-  $(window).trigger('resize');
+  $(window).resize();
+
+
   sessionStorage.setItem('country_redirector_hide', true);
   localStorage.setItem('country_redirector_hide', true);
   document.cookie = "country_redirector_hide=1";
